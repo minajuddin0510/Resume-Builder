@@ -2,7 +2,7 @@
 
 > Build professional, print-ready resumes in minutes — directly in your browser. No sign-up, no backend, no nonsense.
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20Site-6c63ff?style=for-the-badge&logo=github)](https://minajuddin0510.github.io/Resume-builder)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Visit%20Site-6c63ff?style=for-the-badge&logo=github)](https://minajuddin0510.github.io/Resume-Builder)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
 [![HTML5](https://img.shields.io/badge/Built%20With-HTML%20%2F%20CSS%20%2F%20JS-ef4444?style=for-the-badge&logo=html5)]()
 
@@ -42,8 +42,8 @@
 Just open `index.html` in any modern browser. No build step, no server required.
 
 ```bash
-git clone https://github.com/minajuddin0510/Resume-builder.git
-cd Resume-builder
+git clone https://github.com/minajuddin0510/Resume-Builder.git
+cd Resume-Builder
 open index.html   # macOS
 # or
 start index.html  # Windows
@@ -54,14 +54,14 @@ start index.html  # Windows
 1. Go to your repo → **Settings → Pages**
 2. Set source to `main` branch, `/ (root)`
 3. Your resume builder will be live at:
-   `https://minajuddin0510.github.io/Resume-builder`
+   `https://minajuddin0510.github.io/Resume-Builder`
 
 ---
 
 ## 🗂️ Project Structure
 
 ```
-Resume-builder/
+Resume-Builder/
 └── index.html      # The entire app — self-contained single file
 ```
 
