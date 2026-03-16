@@ -1709,20 +1709,104 @@ function mobTab(mode, btn) {
 // ============================================================
 function dlPDF() {
   const page = document.getElementById('rPage');
-  // Reset transform before printing (mobile scaling shouldn't affect print output)
+  if (!page) return;
+
+  // Save current state
   const oldTransform = page.style.transform;
   const oldMarginBottom = page.style.marginBottom;
+
+  // Reset transform/margins before printing
   page.style.transform = 'none';
   page.style.marginBottom = '0';
 
-  // Trigger print dialog
-  window.print();
+  try {
+    // Create a new window for printing (more reliable on mobile)
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow pop-ups for PDF download to work');
+      restoreTransform();
+      return;
+    }
 
-  // Restore transform after print dialog closes (so preview remains scaled on mobile)
-  setTimeout(() => {
-    page.style.transform = oldTransform;
-    page.style.marginBottom = oldMarginBottom;
-  }, 100);
+    // Get all stylesheets from current document
+    const styleSheets = Array.from(document.styleSheets)
+      .map(sheet => {
+        try {
+          return sheet.href || sheet.import?.href || '';
+        } catch {
+          return '';
+        }
+      })
+      .filter(Boolean)
+      .map(href => `<link rel="stylesheet" href="${href}">`)
+      .join('');
+
+    // Get the resume HTML
+    const resumeHTML = page.innerHTML;
+
+    // Build the print document
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Resume - ${S.p.name || 'Resume'}</title>
+        ${styleSheets}
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { background: white; }
+          .r-page {
+            width: 210mm;
+            height: 297mm;
+            margin: 0 auto;
+            padding: 40px 50px;
+            background: white;
+            box-shadow: none;
+            animation: none;
+            transform: none !important;
+            position: relative;
+          }
+          @media print {
+            @page { size: A4; margin: 15mm; }
+            body { margin: 0; padding: 0; }
+            .r-page { width: 100%; height: auto; box-shadow: none; margin: 0; padding: 40px 50px; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="r-page t-${S.tpl}">
+          ${resumeHTML}
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Write to print window
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+
+    // Wait for content to load, then print
+    printWindow.onload = function() {
+      setTimeout(() => {
+        printWindow.print();
+        // Don't close immediately - let user choose print action
+        setTimeout(() => printWindow.close(), 500);
+      }, 250);
+    };
+
+  } catch (err) {
+    console.error('Print error:', err);
+    alert('Unable to open print dialog. Please try again.');
+    restoreTransform();
+  }
+
+  function restoreTransform() {
+    setTimeout(() => {
+      page.style.transform = oldTransform;
+      page.style.marginBottom = oldMarginBottom;
+    }, 100);
+  }
 }
 
 // ============================================================
