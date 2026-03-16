@@ -574,20 +574,37 @@
        Hides everything except the resume page
     ============================================================ */
     @media print {
-      @page { size: A4; margin: 15mm; }
-      body { overflow: visible !important; height: auto !important; display: block !important; }
-      .app-header, .editor, .prev-toolbar, .mobile-bar, .mob-tpl-bar, .page-div { display: none !important; }
-      .main { display: block !important; height: auto !important; overflow: visible !important; }
-      .preview { padding: 0 !important; background: #fff !important; overflow: visible !important; height: auto !important; }
-      .r-page {
-        width: 100% !important; box-shadow: none !important;
-        position: absolute; left: 0; top: 0;
-        animation: none !important;
-        transform: none !important;
-        margin-bottom: 0 !important;
-        padding: 40px 50px !important;
+      @page { size: A4; margin: 10mm 15mm 10mm 15mm; }
+
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
       }
-      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+      body { overflow: visible !important; height: auto !important; display: block !important; background: white !important; }
+
+      .app-header, .editor, .prev-toolbar, .mobile-bar, .mob-tpl-bar, .page-div, .btn { display: none !important; }
+
+      .main { display: block !important; height: auto !important; overflow: visible !important; }
+
+      .preview {
+        padding: 0 !important; background: white !important; overflow: visible !important;
+        height: auto !important; display: block !important; width: 100% !important;
+      }
+
+      .r-page {
+        width: 100% !important; max-width: 100% !important;
+        box-shadow: none !important;
+        position: relative !important; left: auto !important; top: auto !important;
+        animation: none !important; transform: none !important;
+        margin: 0 !important; padding: 10mm 15mm !important; min-height: auto !important;
+      }
+
+      .t-sidebar { grid-template-columns: 180px 1fr !important; min-height: auto !important; }
+
+      .item { page-break-inside: avoid !important; break-inside: avoid !important; }
+      .stitle { page-break-after: avoid !important; break-after: avoid !important; }
     }
 
     /* ============================================================
@@ -943,10 +960,7 @@ function setTpl(name) {
 
 function applyTpl(name) {
   S.tpl = name;
-  document.querySelectorAll('.tpl-tab').forEach(b =>
-    b.classList.toggle('active', b.textContent.trim().toLowerCase() === name)
-  );
-  document.querySelectorAll('.mob-tpl-btn').forEach(b =>
+  document.querySelectorAll('.tpl-tab, .mob-tpl-btn').forEach(b =>
     b.classList.toggle('active', b.textContent.trim().toLowerCase() === name)
   );
   const noAccent = ['classic', 'minimal', 'elegant'];
@@ -1382,21 +1396,25 @@ function domIdx(selector, id) {
 // PREVIEW RENDER — builds resume HTML for the active template
 // ============================================================
 function render() {
-  const page = document.getElementById('rPage');
-  page.className = `r-page t-${S.tpl}`;
-  page.style.setProperty('--accent', S.accent);
-  if      (S.tpl === 'classic')   page.innerHTML = renderClassic();
-  else if (S.tpl === 'minimal')   page.innerHTML = renderMinimal();
-  else if (S.tpl === 'executive') page.innerHTML = renderExecutive();
-  else if (S.tpl === 'sidebar')   page.innerHTML = renderSidebar();
-  else if (S.tpl === 'tech')      page.innerHTML = renderTech();
-  else if (S.tpl === 'elegant')   page.innerHTML = renderElegant();
-  else if (S.tpl === 'sharp')     page.innerHTML = renderSharp();
-  requestAnimationFrame(() => snapPages(page));
+  rPage.className = `r-page t-${S.tpl}`;
+  rPage.style.setProperty('--accent', S.accent);
+  if      (S.tpl === 'classic')   rPage.innerHTML = renderClassic();
+  else if (S.tpl === 'minimal')   rPage.innerHTML = renderMinimal();
+  else if (S.tpl === 'executive') rPage.innerHTML = renderExecutive();
+  else if (S.tpl === 'sidebar')   rPage.innerHTML = renderSidebar();
+  else if (S.tpl === 'tech')      rPage.innerHTML = renderTech();
+  else if (S.tpl === 'elegant')   rPage.innerHTML = renderElegant();
+  else if (S.tpl === 'sharp')     rPage.innerHTML = renderSharp();
+  requestAnimationFrame(() => snapPages(rPage));
 }
 
 // Snap .r-page to the nearest full page boundary and inject visual dividers
-const PAGE_H = 1123;
+const PAGE_H = 1123; // A4 height at 96dpi (297mm)
+const PAGE_W = 794;  // A4 width at 96dpi (210mm)
+const MOB_W  = 768;  // mobile breakpoint — mirrors CSS @media (max-width: 768px)
+
+// Cached references to stable DOM nodes — assigned in DOMContentLoaded
+let rPage, previewEl;
 
 function snapPages(page) {
   // Remove stale dividers (innerHTML may not have cleared them if called standalone)
@@ -1681,132 +1699,45 @@ function renderMinimal() {
 // ============================================================
 // Scale .r-page to fit mobile screens using CSS transform
 function scaleRPage() {
-  const page = document.getElementById('rPage');
-  const pv   = document.getElementById('preview');
-  if (!page || !pv) return;
-  page.style.marginBottom = ''; // reset before measuring
-  if (window.innerWidth > 768) { page.style.transform = ''; return; }
-  const avail = pv.clientWidth - 20; // 10px padding each side
-  if (avail <= 0) return; // panel hidden, skip
-  const scale = Math.min(1, avail / 794);
-  if (scale >= 1) { page.style.transform = ''; return; }
-  page.style.transformOrigin = 'top center';
-  page.style.transform = `scale(${scale.toFixed(4)})`;
-  page.style.marginBottom = `${Math.round((scale - 1) * page.offsetHeight)}px`;
+  if (window.innerWidth > MOB_W) {
+    rPage.style.transform = '';
+    rPage.style.marginBottom = '';
+    return;
+  }
+  // Batch: one write (clear), then batch all reads before the final writes
+  rPage.style.marginBottom = '';             // clear old compensation (invalidates layout)
+  const avail = previewEl.clientWidth - 20; // read → triggers single reflow
+  if (avail <= 0) return;                   // panel hidden, skip
+  const scale = Math.min(1, avail / PAGE_W);
+  if (scale >= 1) { rPage.style.transform = ''; return; }
+  const h = rPage.offsetHeight;             // read from already-flushed layout (no extra reflow)
+  rPage.style.transformOrigin = 'top center';
+  rPage.style.transform = `scale(${scale.toFixed(4)})`;
+  rPage.style.marginBottom = `${Math.round((scale - 1) * h)}px`;
 }
 
 function mobTab(mode, btn) {
   document.querySelectorAll('.mob-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   const ed = document.getElementById('editor');
-  const pv = document.getElementById('preview');
-  if (mode === 'edit') { ed.classList.remove('mob-hide'); pv.classList.remove('mob-show'); pv.style.display = 'none'; }
-  else { ed.classList.add('mob-hide'); pv.classList.add('mob-show'); pv.style.display = 'flex'; scaleRPage(); }
+  if (mode === 'edit') { ed.classList.remove('mob-hide'); previewEl.classList.remove('mob-show'); previewEl.style.display = 'none'; }
+  else { ed.classList.add('mob-hide'); previewEl.classList.add('mob-show'); previewEl.style.display = 'flex'; scaleRPage(); }
 }
 
 // ============================================================
 // PDF DOWNLOAD
 // ============================================================
 function dlPDF() {
-  const page = document.getElementById('rPage');
-  if (!page) return;
-
-  // Save current state
-  const oldTransform = page.style.transform;
-  const oldMarginBottom = page.style.marginBottom;
-
-  // Reset transform/margins before printing
-  page.style.transform = 'none';
-  page.style.marginBottom = '0';
-
-  try {
-    // Create a new window for printing (more reliable on mobile)
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      alert('Please allow pop-ups for PDF download to work');
-      restoreTransform();
-      return;
-    }
-
-    // Get all stylesheets from current document
-    const styleSheets = Array.from(document.styleSheets)
-      .map(sheet => {
-        try {
-          return sheet.href || sheet.import?.href || '';
-        } catch {
-          return '';
-        }
-      })
-      .filter(Boolean)
-      .map(href => `<link rel="stylesheet" href="${href}">`)
-      .join('');
-
-    // Get the resume HTML
-    const resumeHTML = page.innerHTML;
-
-    // Build the print document
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Resume - ${S.p.name || 'Resume'}</title>
-        ${styleSheets}
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { background: white; }
-          .r-page {
-            width: 210mm;
-            height: 297mm;
-            margin: 0 auto;
-            padding: 40px 50px;
-            background: white;
-            box-shadow: none;
-            animation: none;
-            transform: none !important;
-            position: relative;
-          }
-          @media print {
-            @page { size: A4; margin: 15mm; }
-            body { margin: 0; padding: 0; }
-            .r-page { width: 100%; height: auto; box-shadow: none; margin: 0; padding: 40px 50px; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="r-page t-${S.tpl}">
-          ${resumeHTML}
-        </div>
-      </body>
-      </html>
-    `;
-
-    // Write to print window
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-
-    // Wait for content to load, then print
-    printWindow.onload = function() {
-      setTimeout(() => {
-        printWindow.print();
-        // Don't close immediately - let user choose print action
-        setTimeout(() => printWindow.close(), 500);
-      }, 250);
-    };
-
-  } catch (err) {
-    console.error('Print error:', err);
-    alert('Unable to open print dialog. Please try again.');
-    restoreTransform();
-  }
-
-  function restoreTransform() {
-    setTimeout(() => {
-      page.style.transform = oldTransform;
-      page.style.marginBottom = oldMarginBottom;
-    }, 100);
-  }
+  const oldTransform = rPage.style.transform;
+  const oldMarginBottom = rPage.style.marginBottom;
+  rPage.style.transform = 'none';
+  rPage.style.marginBottom = '0';
+  window.print();
+  setTimeout(() => {
+    rPage.style.transform = oldTransform;
+    rPage.style.marginBottom = oldMarginBottom;
+    scaleRPage();
+  }, 500);
 }
 
 // ============================================================
@@ -1822,14 +1753,17 @@ function clearAll() {
 // INIT
 // ============================================================
 document.addEventListener('DOMContentLoaded', () => {
+  rPage     = document.getElementById('rPage');
+  previewEl = document.getElementById('preview');
   buildOrderUI();
   load();
-  // If nothing was saved, do an initial render of the empty state
   if (!localStorage.getItem(LS_KEY)) {
     render();
     updProgress();
   }
-  window.addEventListener('resize', scaleRPage);
+  // Debounced resize — scaleRPage fires at most once per 100ms during drag-resize
+  let _rt;
+  window.addEventListener('resize', () => { clearTimeout(_rt); _rt = setTimeout(scaleRPage, 100); });
 });
 </script>
 </body>
