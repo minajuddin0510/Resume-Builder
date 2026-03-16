@@ -583,6 +583,9 @@
         width: 100% !important; box-shadow: none !important;
         position: absolute; left: 0; top: 0;
         animation: none !important;
+        transform: none !important;
+        margin-bottom: 0 !important;
+        padding: 40px 50px !important;
       }
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
@@ -1704,7 +1707,23 @@ function mobTab(mode, btn) {
 // ============================================================
 // PDF DOWNLOAD
 // ============================================================
-function dlPDF() { window.print(); }
+function dlPDF() {
+  const page = document.getElementById('rPage');
+  // Reset transform before printing (mobile scaling shouldn't affect print output)
+  const oldTransform = page.style.transform;
+  const oldMarginBottom = page.style.marginBottom;
+  page.style.transform = 'none';
+  page.style.marginBottom = '0';
+
+  // Trigger print dialog
+  window.print();
+
+  // Restore transform after print dialog closes (so preview remains scaled on mobile)
+  setTimeout(() => {
+    page.style.transform = oldTransform;
+    page.style.marginBottom = oldMarginBottom;
+  }, 100);
+}
 
 // ============================================================
 // CLEAR ALL
