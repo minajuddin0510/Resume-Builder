@@ -27,11 +27,10 @@
 
 ## 🖥️ Screenshots
 
-> *(Add screenshots of your templates here once deployed)*
 
 | Classic | Executive | Sidebar |
 |---------|-----------|---------|
-| ![Classic]() | ![Executive]() | ![Sidebar]() |
+| ![Classic](Classic.png) | ![Executive](Executive.png) | ![Sidebar](Sidebar.png) |
 
 ---
 
